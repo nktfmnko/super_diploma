@@ -22,12 +22,12 @@ sealed class NearbyDiscoveryServiceException implements Exception {
   const NearbyDiscoveryServiceException(this.message);
 }
 
-/// Система занята. Пожалуйста, дождитесь завершения текущей операции, прежде чем начинать следующую.
+/// Система занята. Убедитесь, что Wi-Fi, GPS включен и попробуйте снова
 class NearbyDiscoveryServiceBusyException
     extends NearbyDiscoveryServiceException {
   const NearbyDiscoveryServiceBusyException()
     : super(
-        'Система занята. Пожалуйста, дождитесь завершения текущей операции, прежде чем начинать следующую.',
+        'Система занята. Убедитесь, что Wi-Fi, GPS включен и попробуйте снова',
       );
 }
 

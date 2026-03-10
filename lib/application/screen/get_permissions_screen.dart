@@ -50,7 +50,7 @@ class _GetPermissionsScreenState extends State<GetPermissionsScreen>
       setState(() {});
 
       if (wifi && perm) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        Navigator.of(context).pushReplacementNamed('/discovery');
       }
     }
   }
