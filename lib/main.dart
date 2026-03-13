@@ -3,11 +3,13 @@ import 'package:get_it/get_it.dart';
 import 'package:nearby_service/nearby_service.dart';
 import 'package:super_diploma/application/screen/discovery_screen.dart';
 import 'package:super_diploma/application/screen/get_permissions_screen.dart';
+import 'package:super_diploma/domain/repository/nearby_connection_service.dart';
 import 'package:super_diploma/domain/repository/nearby_discovery_service.dart';
 import 'package:super_diploma/infrastructure/repository/nearby_discovery_service_impl.dart';
 
 import 'domain/repository/device_status_service.dart';
 import 'infrastructure/repository/device_status_service_impl.dart';
+import 'infrastructure/repository/nearby_connection_service_impl.dart';
 
 final getIt = GetIt.instance;
 
@@ -19,6 +21,10 @@ void setup() {
 
   getIt.registerLazySingleton<INearbyDiscoveryService>(
     () => NearbyDiscoveryService(getIt<NearbyService>()),
+  );
+
+  getIt.registerLazySingleton<INearbyConnectionService>(
+    () => NearbyConnectionService(getIt<NearbyService>()),
   );
 }
 

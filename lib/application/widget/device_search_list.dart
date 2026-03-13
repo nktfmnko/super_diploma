@@ -25,7 +25,7 @@ class DeviceSearchList extends StatelessWidget {
           itemCount: devices.length,
           itemBuilder: (_, index) {
             final device = devices[index];
-            return PeerWidget(deviceName: device.info.displayName);
+            return PeerWidget(device: device);
           },
         );
       },

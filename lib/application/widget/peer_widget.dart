@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:super_diploma/application/widget/custom_button.dart';
+import 'package:nearby_service/nearby_service.dart';
+import 'package:super_diploma/application/widget/custom_connect_button.dart';
 
 class PeerWidget extends StatelessWidget {
-  final String deviceName;
+  final NearbyDevice device;
 
-  const PeerWidget({super.key, required this.deviceName});
+  const PeerWidget({super.key, required this.device});
 
   @override
   Widget build(BuildContext context) {
@@ -14,10 +15,10 @@ class PeerWidget extends StatelessWidget {
         mainAxisAlignment: .center,
         children: [
           Icon(Icons.account_circle, size: 40),
-          Text(deviceName),
+          Text(device.info.displayName),
           Padding(
             padding: .only(left: 10),
-            child: CustomButton(name: 'Подключиться', onPressed: () {}),
+            child: CustomConnectButton(device: device),
           ),
         ],
       ),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:super_diploma/application/ui_utils/snackbar_utils.dart';
 import 'package:super_diploma/application/widget/custom_switch.dart';
 import 'package:super_diploma/application/widget/device_search_list.dart';
+import 'package:super_diploma/domain/errors/connectivity_exception.dart';
 import 'package:super_diploma/domain/repository/nearby_discovery_service.dart';
 
 class DiscoveryScreen extends StatefulWidget {
@@ -15,21 +17,14 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   final _discoveryService = GetIt.I<INearbyDiscoveryService>();
   bool _isSearchEnabled = false;
 
-  void _showErrorSnackBar(String message) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _startDiscovery() async {
     try {
       await _discoveryService.startDiscovery();
-    } on NearbyDiscoveryServiceException catch (e) {
-      _showErrorSnackBar(e.message);
+    } on ConnectivityException catch (e) {
+      showErrorSnackBar(e.message, context);
       rethrow;
     } on Exception {
-      _showErrorSnackBar('Что-то пошло не так');
+      showErrorSnackBar('Что-то пошло не так', context);
       rethrow;
     }
   }
@@ -37,11 +32,11 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   Future<void> _stopDiscovery() async {
     try {
       await _discoveryService.stopDiscovery();
-    } on NearbyDiscoveryServiceException catch (e) {
-      _showErrorSnackBar(e.message);
+    } on ConnectivityException catch (e) {
+      showErrorSnackBar(e.message, context);
       rethrow;
     } on Exception {
-      _showErrorSnackBar('Что-то пошло не так');
+      showErrorSnackBar('Что-то пошло не так', context);
       rethrow;
     }
   }
@@ -50,10 +45,10 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   void dispose() {
     try {
       _discoveryService.dispose();
-    } on NearbyDiscoveryServiceException catch (e) {
-      _showErrorSnackBar(e.message);
+    } on ConnectivityException catch (e) {
+      showErrorSnackBar(e.message, context);
     } on Exception {
-      _showErrorSnackBar('Что-то пошло не так.');
+      showErrorSnackBar('Что-то пошло не так.', context);
     }
     super.dispose();
   }
