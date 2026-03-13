@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:nearby_service/nearby_service.dart';
+import 'package:super_diploma/domain/errors/connectivity_exception.dart';
 import 'package:super_diploma/domain/repository/nearby_connection_service.dart';
 
 class NearbyConnectionService implements INearbyConnectionService {
@@ -27,16 +28,19 @@ class NearbyConnectionService implements INearbyConnectionService {
           .timeout(const Duration(seconds: 15), onTimeout: () => null);
 
       return connectedDevice != null;
-    } catch (_) {
-      return false;
+    } on NearbyServiceException catch (e) {
+      handleConnectivityException(e);
     }
+    return false;
   }
 
   @override
   Future<void> disconnect(NearbyDevice device) async {
     try {
       await _nearbyService.disconnectById(device.info.id);
-    } catch (e) {}
+    } on NearbyServiceException catch (e) {
+      handleConnectivityException(e);
+    }
   }
 
   @override

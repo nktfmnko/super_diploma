@@ -1,12 +1,13 @@
 import 'package:nearby_service/nearby_service.dart';
+import 'package:super_diploma/domain/errors/connectivity_exception.dart';
 
 abstract interface class INearbyDiscoveryService {
   /// Метод, который запускает поиск ближайших устройств.
-  /// Может выбросить исключение подтипа [NearbyDiscoveryServiceException]
+  /// Может выбросить исключение подтипа [ConnectivityException]
   Future<void> startDiscovery();
 
   /// Метод, который отменяет поиск ближайших устройств.
-  /// Может выбросить исключение подтипа [NearbyDiscoveryServiceException]
+  /// Может выбросить исключение подтипа [ConnectivityException]
   Future<void> stopDiscovery();
 
   /// Поток, транслирующий список найденных устройств.
@@ -14,51 +15,4 @@ abstract interface class INearbyDiscoveryService {
 
   /// Освобождает ресурсы, используемые сервисом.
   Future<void> dispose();
-}
-
-sealed class NearbyDiscoveryServiceException implements Exception {
-  final String message;
-
-  const NearbyDiscoveryServiceException(this.message);
-}
-
-/// Система занята. Убедитесь, что Wi-Fi, GPS включен и попробуйте снова
-class NearbyDiscoveryServiceBusyException
-    extends NearbyDiscoveryServiceException {
-  const NearbyDiscoveryServiceBusyException()
-    : super(
-        'Система занята. Убедитесь, что Wi-Fi, GPS включен и попробуйте снова',
-      );
-}
-
-/// P2P на этом устройстве не поддерживается.
-class NearbyDiscoveryServiceP2PUnsupportedException
-    extends NearbyDiscoveryServiceException {
-  const NearbyDiscoveryServiceP2PUnsupportedException()
-    : super('P2P на этом устройстве не поддерживается.');
-}
-
-/// Устройства не найдены. Запустите поиск
-class NearbyDiscoveryServiceNoServiceRequestsException
-    extends NearbyDiscoveryServiceException {
-  const NearbyDiscoveryServiceNoServiceRequestsException()
-    : super('Устройства не найдены. Запустите поиск');
-}
-
-/// Ошибка связи. Убедитесь, что Wi-Fi, GPS включен и попробуйте снова
-class NearbyDiscoveryServiceGenericErrorException
-    extends NearbyDiscoveryServiceException {
-  const NearbyDiscoveryServiceGenericErrorException()
-    : super(
-        'Ошибка связи. Убедитесь, что Wi-Fi, GPS включен и попробуйте снова',
-      );
-}
-
-/// Что-то пошло не так. Убедитесь, что Wi-Fi, GPS включен и попробуйте снова
-class NearbyDiscoveryServiceUnknownException
-    extends NearbyDiscoveryServiceException {
-  const NearbyDiscoveryServiceUnknownException()
-    : super(
-        'Что-то пошло не так. Убедитесь, что Wi-Fi, GPS включен и попробуйте снова',
-      );
 }

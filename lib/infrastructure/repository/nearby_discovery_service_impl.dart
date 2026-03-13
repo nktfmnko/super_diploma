@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:nearby_service/nearby_service.dart';
+import 'package:super_diploma/domain/errors/connectivity_exception.dart';
 import 'package:super_diploma/domain/repository/nearby_discovery_service.dart';
 
 class NearbyDiscoveryService implements INearbyDiscoveryService {
@@ -10,23 +11,6 @@ class NearbyDiscoveryService implements INearbyDiscoveryService {
   final _peersController = StreamController<List<NearbyDevice>>.broadcast();
 
   NearbyDiscoveryService(this._nearbyService);
-
-  void _handleDiscoveryException(NearbyServiceException e) {
-    switch (e) {
-      case NearbyServiceBusyException():
-        throw NearbyDiscoveryServiceBusyException();
-      case NearbyServiceP2PUnsupportedException():
-        throw NearbyDiscoveryServiceP2PUnsupportedException();
-      case NearbyServiceNoServiceRequestsException():
-        throw NearbyDiscoveryServiceNoServiceRequestsException();
-      case NearbyServiceGenericErrorException():
-        throw NearbyDiscoveryServiceGenericErrorException();
-      case NearbyServiceUnknownException():
-        throw NearbyDiscoveryServiceUnknownException();
-      default:
-        throw NearbyDiscoveryServiceUnknownException();
-    }
-  }
 
   @override
   Stream<List<NearbyDevice>> get peersStream => _peersController.stream;
@@ -43,7 +27,7 @@ class NearbyDiscoveryService implements INearbyDiscoveryService {
         });
       }
     } on NearbyServiceException catch (e) {
-      _handleDiscoveryException(e);
+      handleConnectivityException(e);
     }
   }
 
@@ -56,7 +40,7 @@ class NearbyDiscoveryService implements INearbyDiscoveryService {
       _peersSubscriptions = null;
       _peersController.add([]);
     } on NearbyServiceException catch (e) {
-      _handleDiscoveryException(e);
+      handleConnectivityException(e);
     }
   }
 
