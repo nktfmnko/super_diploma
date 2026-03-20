@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nearby_service/nearby_service.dart';
-import 'package:super_diploma/application/widget/custom_connect_button.dart';
+import 'package:super_diploma/application/widget/discovery_widgets/custom_connect_button.dart';
 
 class PeerWidget extends StatelessWidget {
   final NearbyDevice device;
@@ -18,7 +18,10 @@ class PeerWidget extends StatelessWidget {
           Text(device.info.displayName),
           Padding(
             padding: .only(left: 10),
-            child: CustomConnectButton(device: device),
+            child: CustomConnectButton(
+              device: device,
+              key: ValueKey(device.info.id),
+            ),
           ),
         ],
       ),

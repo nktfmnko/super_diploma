@@ -47,8 +47,9 @@ class NearbyMessagingService implements INearbyMessagingService {
           },
           onData: (message) => _messagesController.add(message),
           onDone: () {
+            debugPrint('Соединение закрыто другим устройством');
             _messagesController.addError(
-              'Соединение закрыто удаленным устройством',
+              'Соединение закрыто другим устройством',
             );
           },
           onError: (e, [StackTrace? s]) {

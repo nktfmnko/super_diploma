@@ -1,24 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
 import 'package:nearby_service/nearby_service.dart';
 import 'package:super_diploma/application/controllers/connection_controller.dart';
+import 'package:super_diploma/application/screen/chat_screen.dart';
 import 'package:super_diploma/application/ui_utils/snackbar_utils.dart';
 import 'package:super_diploma/domain/errors/connectivity_exception.dart';
-import 'package:super_diploma/domain/repository/nearby_connection_service.dart';
 
-import 'custom_button.dart';
+import '../custom_button.dart';
 
-class CustomConnectButton extends StatelessWidget {
+class CustomConnectButton extends StatefulWidget {
   final NearbyDevice device;
 
-  CustomConnectButton({super.key, required this.device});
+  const CustomConnectButton({super.key, required this.device});
 
-  final _connectionService = GetIt.I<INearbyConnectionService>();
+  @override
+  State<CustomConnectButton> createState() => _CustomConnectButtonState();
+}
 
-  late final ConnectionController _controller = ConnectionController(
-    connectionService: _connectionService,
-    device: device,
-  );
+class _CustomConnectButtonState extends State<CustomConnectButton> {
+  late final ConnectionController _controller;
 
   void _handleConnect(BuildContext context) async {
     try {
@@ -28,6 +27,18 @@ class CustomConnectButton extends StatelessWidget {
     } on Exception {
       showErrorSnackBar('Что-то пошло не так', context);
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = ConnectionController(device: widget.device);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -43,7 +54,18 @@ class CustomConnectButton extends StatelessWidget {
                 : Row(
                     children: [
                       _controller.status == ConnectionStatus.connected
-                          ? CustomButton(name: 'В чат')
+                          ? CustomButton(
+                              name: 'В чат',
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ChatScreen(device: widget.device),
+                                  ),
+                                );
+                              },
+                            )
                           : SizedBox.shrink(),
                       Padding(
                         padding: const .only(left: 5),

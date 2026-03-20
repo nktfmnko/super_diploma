@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nearby_service/nearby_service.dart';
-import 'package:super_diploma/application/widget/peer_widget.dart';
+import 'package:super_diploma/application/widget/discovery_widgets/peer_widget.dart';
 
 class DeviceSearchList extends StatelessWidget {
   final Stream<List<NearbyDevice>> peersStream;

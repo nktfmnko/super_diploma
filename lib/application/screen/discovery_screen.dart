@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:super_diploma/application/ui_utils/snackbar_utils.dart';
-import 'package:super_diploma/application/widget/custom_switch.dart';
-import 'package:super_diploma/application/widget/device_search_list.dart';
+import 'package:super_diploma/application/widget/discovery_widgets/custom_switch.dart';
+import 'package:super_diploma/application/widget/discovery_widgets/device_search_list.dart';
 import 'package:super_diploma/domain/errors/connectivity_exception.dart';
 import 'package:super_diploma/domain/repository/nearby_discovery_service.dart';
 
