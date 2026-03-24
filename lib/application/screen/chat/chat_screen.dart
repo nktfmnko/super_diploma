@@ -37,8 +37,8 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Text(widget.device.info.displayName, overflow: .fade),
         actions: [
           CustomPopupButton(
-            deleteHistoryFunc: _messagingController.deleteHistory,
             chatId: widget.device.info.id,
+            controller: _messagingController,
           ),
         ],
       ),

@@ -162,6 +162,13 @@ class MessagingController extends ChangeNotifier {
     await _messageDao.deleteHistory(chatId);
   }
 
+  Future<List<ReceivedNearbyMessage>> searchMessage(
+    String chatId,
+    String query,
+  ) async {
+    return await _messageDao.searchMessages(chatId, query);
+  }
+
   @override
   void dispose() {
     _communicationStatus?.cancel();

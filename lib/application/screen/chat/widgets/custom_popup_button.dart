@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:super_diploma/application/controllers/messaging_controller.dart';
 import 'package:super_diploma/application/screen/chat/widgets/delete_chat_alert_dialog.dart';
+import 'package:super_diploma/application/screen/chat/widgets/message_search_delegate.dart';
 
 class CustomPopupButton extends StatelessWidget {
-  final Future<void> Function(String) deleteHistoryFunc;
+  final MessagingController controller;
   final String chatId;
 
   const CustomPopupButton({
     super.key,
-    required this.deleteHistoryFunc,
     required this.chatId,
+    required this.controller,
   });
 
   @override
@@ -17,8 +19,14 @@ class CustomPopupButton extends StatelessWidget {
       icon: const Icon(Icons.more_vert),
       menuPadding: .all(5),
       itemBuilder: (BuildContext context) => [
-        //TODO реализовать поиск
         PopupMenuItem(
+          onTap: () => showSearch(
+            context: context,
+            delegate: MessageSearchDelegate(
+              chatId: chatId,
+              controller: controller,
+            ),
+          ),
           child: Row(children: [const Icon(Icons.search), Text('Поиск')]),
         ),
         PopupMenuItem(
@@ -30,7 +38,7 @@ class CustomPopupButton extends StatelessWidget {
               },
             );
             if (result == 'OK') {
-              await deleteHistoryFunc(chatId);
+              await controller.deleteHistory(chatId);
             }
           },
           child: Row(

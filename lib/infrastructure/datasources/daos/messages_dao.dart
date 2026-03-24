@@ -11,9 +11,13 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
   MessagesDao(super.attachedDatabase);
 
   Future<void> insertMessage(ReceivedNearbyMessage msg, String chatId) async {
-    await into(
-      messages,
-    ).insert(MessagesCompanion(messageData: Value(msg), chatId: Value(chatId)));
+    await into(messages).insert(
+      MessagesCompanion(
+        messageData: Value(msg),
+        chatId: Value(chatId),
+        textContent: Value(msg.content.toString()),
+      ),
+    );
   }
 
   Future<void> deleteHistory(String chatId) async {
@@ -31,5 +35,19 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
           ..limit(limit))
         .watch()
         .map((rows) => rows.map((row) => row.messageData).toList());
+  }
+
+  Future<List<ReceivedNearbyMessage<NearbyMessageContent>>> searchMessages(
+    String chatId,
+    String query,
+  ) async {
+    final rows =
+        await (select(messages)..where(
+              (tbl) =>
+                  tbl.chatId.equals(chatId) & tbl.textContent.like('%$query%'),
+            ))
+            .get();
+
+    return rows.map((row) => row.messageData).toList();
   }
 }

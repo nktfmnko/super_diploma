@@ -6,6 +6,8 @@ class Messages extends Table {
 
   TextColumn get messageData => text().map(NearbyMessageConverter())();
 
+  TextColumn get textContent => text().nullable()();
+
   TextColumn get chatId => text()();
 
   DateTimeColumn get receivedAt => dateTime().withDefault(currentDateAndTime)();

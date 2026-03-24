@@ -36,6 +36,17 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
       ).withConverter<ReceivedNearbyMessage<NearbyMessageContent>>(
         $MessagesTable.$convertermessageData,
       );
+  static const VerificationMeta _textContentMeta = const VerificationMeta(
+    'textContent',
+  );
+  @override
+  late final GeneratedColumn<String> textContent = GeneratedColumn<String>(
+    'text_content',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _chatIdMeta = const VerificationMeta('chatId');
   @override
   late final GeneratedColumn<String> chatId = GeneratedColumn<String>(
@@ -58,7 +69,13 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, messageData, chatId, receivedAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    messageData,
+    textContent,
+    chatId,
+    receivedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -73,6 +90,15 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('text_content')) {
+      context.handle(
+        _textContentMeta,
+        textContent.isAcceptableOrUnknown(
+          data['text_content']!,
+          _textContentMeta,
+        ),
+      );
     }
     if (data.containsKey('chat_id')) {
       context.handle(
@@ -107,6 +133,10 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
           data['${effectivePrefix}message_data'],
         )!,
       ),
+      textContent: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}text_content'],
+      ),
       chatId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}chat_id'],
@@ -130,11 +160,13 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
 class Message extends DataClass implements Insertable<Message> {
   final int id;
   final ReceivedNearbyMessage<NearbyMessageContent> messageData;
+  final String? textContent;
   final String chatId;
   final DateTime receivedAt;
   const Message({
     required this.id,
     required this.messageData,
+    this.textContent,
     required this.chatId,
     required this.receivedAt,
   });
@@ -147,6 +179,9 @@ class Message extends DataClass implements Insertable<Message> {
         $MessagesTable.$convertermessageData.toSql(messageData),
       );
     }
+    if (!nullToAbsent || textContent != null) {
+      map['text_content'] = Variable<String>(textContent);
+    }
     map['chat_id'] = Variable<String>(chatId);
     map['received_at'] = Variable<DateTime>(receivedAt);
     return map;
@@ -156,6 +191,9 @@ class Message extends DataClass implements Insertable<Message> {
     return MessagesCompanion(
       id: Value(id),
       messageData: Value(messageData),
+      textContent: textContent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(textContent),
       chatId: Value(chatId),
       receivedAt: Value(receivedAt),
     );
@@ -172,6 +210,7 @@ class Message extends DataClass implements Insertable<Message> {
           .fromJson<ReceivedNearbyMessage<NearbyMessageContent>>(
             json['messageData'],
           ),
+      textContent: serializer.fromJson<String?>(json['textContent']),
       chatId: serializer.fromJson<String>(json['chatId']),
       receivedAt: serializer.fromJson<DateTime>(json['receivedAt']),
     );
@@ -183,6 +222,7 @@ class Message extends DataClass implements Insertable<Message> {
       'id': serializer.toJson<int>(id),
       'messageData': serializer
           .toJson<ReceivedNearbyMessage<NearbyMessageContent>>(messageData),
+      'textContent': serializer.toJson<String?>(textContent),
       'chatId': serializer.toJson<String>(chatId),
       'receivedAt': serializer.toJson<DateTime>(receivedAt),
     };
@@ -191,11 +231,13 @@ class Message extends DataClass implements Insertable<Message> {
   Message copyWith({
     int? id,
     ReceivedNearbyMessage<NearbyMessageContent>? messageData,
+    Value<String?> textContent = const Value.absent(),
     String? chatId,
     DateTime? receivedAt,
   }) => Message(
     id: id ?? this.id,
     messageData: messageData ?? this.messageData,
+    textContent: textContent.present ? textContent.value : this.textContent,
     chatId: chatId ?? this.chatId,
     receivedAt: receivedAt ?? this.receivedAt,
   );
@@ -205,6 +247,9 @@ class Message extends DataClass implements Insertable<Message> {
       messageData: data.messageData.present
           ? data.messageData.value
           : this.messageData,
+      textContent: data.textContent.present
+          ? data.textContent.value
+          : this.textContent,
       chatId: data.chatId.present ? data.chatId.value : this.chatId,
       receivedAt: data.receivedAt.present
           ? data.receivedAt.value
@@ -217,6 +262,7 @@ class Message extends DataClass implements Insertable<Message> {
     return (StringBuffer('Message(')
           ..write('id: $id, ')
           ..write('messageData: $messageData, ')
+          ..write('textContent: $textContent, ')
           ..write('chatId: $chatId, ')
           ..write('receivedAt: $receivedAt')
           ..write(')'))
@@ -224,13 +270,15 @@ class Message extends DataClass implements Insertable<Message> {
   }
 
   @override
-  int get hashCode => Object.hash(id, messageData, chatId, receivedAt);
+  int get hashCode =>
+      Object.hash(id, messageData, textContent, chatId, receivedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Message &&
           other.id == this.id &&
           other.messageData == this.messageData &&
+          other.textContent == this.textContent &&
           other.chatId == this.chatId &&
           other.receivedAt == this.receivedAt);
 }
@@ -238,17 +286,20 @@ class Message extends DataClass implements Insertable<Message> {
 class MessagesCompanion extends UpdateCompanion<Message> {
   final Value<int> id;
   final Value<ReceivedNearbyMessage<NearbyMessageContent>> messageData;
+  final Value<String?> textContent;
   final Value<String> chatId;
   final Value<DateTime> receivedAt;
   const MessagesCompanion({
     this.id = const Value.absent(),
     this.messageData = const Value.absent(),
+    this.textContent = const Value.absent(),
     this.chatId = const Value.absent(),
     this.receivedAt = const Value.absent(),
   });
   MessagesCompanion.insert({
     this.id = const Value.absent(),
     required ReceivedNearbyMessage<NearbyMessageContent> messageData,
+    this.textContent = const Value.absent(),
     required String chatId,
     this.receivedAt = const Value.absent(),
   }) : messageData = Value(messageData),
@@ -256,12 +307,14 @@ class MessagesCompanion extends UpdateCompanion<Message> {
   static Insertable<Message> custom({
     Expression<int>? id,
     Expression<String>? messageData,
+    Expression<String>? textContent,
     Expression<String>? chatId,
     Expression<DateTime>? receivedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (messageData != null) 'message_data': messageData,
+      if (textContent != null) 'text_content': textContent,
       if (chatId != null) 'chat_id': chatId,
       if (receivedAt != null) 'received_at': receivedAt,
     });
@@ -270,12 +323,14 @@ class MessagesCompanion extends UpdateCompanion<Message> {
   MessagesCompanion copyWith({
     Value<int>? id,
     Value<ReceivedNearbyMessage<NearbyMessageContent>>? messageData,
+    Value<String?>? textContent,
     Value<String>? chatId,
     Value<DateTime>? receivedAt,
   }) {
     return MessagesCompanion(
       id: id ?? this.id,
       messageData: messageData ?? this.messageData,
+      textContent: textContent ?? this.textContent,
       chatId: chatId ?? this.chatId,
       receivedAt: receivedAt ?? this.receivedAt,
     );
@@ -292,6 +347,9 @@ class MessagesCompanion extends UpdateCompanion<Message> {
         $MessagesTable.$convertermessageData.toSql(messageData.value),
       );
     }
+    if (textContent.present) {
+      map['text_content'] = Variable<String>(textContent.value);
+    }
     if (chatId.present) {
       map['chat_id'] = Variable<String>(chatId.value);
     }
@@ -306,6 +364,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     return (StringBuffer('MessagesCompanion(')
           ..write('id: $id, ')
           ..write('messageData: $messageData, ')
+          ..write('textContent: $textContent, ')
           ..write('chatId: $chatId, ')
           ..write('receivedAt: $receivedAt')
           ..write(')'))
@@ -329,6 +388,7 @@ typedef $$MessagesTableCreateCompanionBuilder =
     MessagesCompanion Function({
       Value<int> id,
       required ReceivedNearbyMessage<NearbyMessageContent> messageData,
+      Value<String?> textContent,
       required String chatId,
       Value<DateTime> receivedAt,
     });
@@ -336,6 +396,7 @@ typedef $$MessagesTableUpdateCompanionBuilder =
     MessagesCompanion Function({
       Value<int> id,
       Value<ReceivedNearbyMessage<NearbyMessageContent>> messageData,
+      Value<String?> textContent,
       Value<String> chatId,
       Value<DateTime> receivedAt,
     });
@@ -362,6 +423,11 @@ class $$MessagesTableFilterComposer
   get messageData => $composableBuilder(
     column: $table.messageData,
     builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get textContent => $composableBuilder(
+    column: $table.textContent,
+    builder: (column) => ColumnFilters(column),
   );
 
   ColumnFilters<String> get chatId => $composableBuilder(
@@ -394,6 +460,11 @@ class $$MessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get textContent => $composableBuilder(
+    column: $table.textContent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get chatId => $composableBuilder(
     column: $table.chatId,
     builder: (column) => ColumnOrderings(column),
@@ -423,6 +494,11 @@ class $$MessagesTableAnnotationComposer
   >
   get messageData => $composableBuilder(
     column: $table.messageData,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get textContent => $composableBuilder(
+    column: $table.textContent,
     builder: (column) => column,
   );
 
@@ -466,11 +542,13 @@ class $$MessagesTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<ReceivedNearbyMessage<NearbyMessageContent>> messageData =
                     const Value.absent(),
+                Value<String?> textContent = const Value.absent(),
                 Value<String> chatId = const Value.absent(),
                 Value<DateTime> receivedAt = const Value.absent(),
               }) => MessagesCompanion(
                 id: id,
                 messageData: messageData,
+                textContent: textContent,
                 chatId: chatId,
                 receivedAt: receivedAt,
               ),
@@ -479,11 +557,13 @@ class $$MessagesTableTableManager
                 Value<int> id = const Value.absent(),
                 required ReceivedNearbyMessage<NearbyMessageContent>
                 messageData,
+                Value<String?> textContent = const Value.absent(),
                 required String chatId,
                 Value<DateTime> receivedAt = const Value.absent(),
               }) => MessagesCompanion.insert(
                 id: id,
                 messageData: messageData,
+                textContent: textContent,
                 chatId: chatId,
                 receivedAt: receivedAt,
               ),
