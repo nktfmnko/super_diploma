@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:nearby_service/nearby_service.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:super_diploma/application/widget/status_card.dart';
+import 'package:super_diploma/application/screen/permissions/widgets/status_card.dart';
 import 'package:super_diploma/domain/repository/device_status_service.dart';
 
 class GetPermissionsScreen extends StatefulWidget {

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:nearby_service/nearby_service.dart';
 import 'package:super_diploma/application/controllers/connection_controller.dart';
-import 'package:super_diploma/application/screen/chat_screen.dart';
+import 'package:super_diploma/application/screen/chat/chat_screen.dart';
 import 'package:super_diploma/application/ui_utils/snackbar_utils.dart';
 import 'package:super_diploma/domain/errors/connectivity_exception.dart';
 
-import '../custom_button.dart';
+import '../../../widget/custom_button.dart';
 
 class CustomConnectButton extends StatefulWidget {
   final NearbyDevice device;
@@ -53,8 +53,8 @@ class _CustomConnectButtonState extends State<CustomConnectButton> {
                 ? CircularProgressIndicator()
                 : Row(
                     children: [
-                      _controller.status == ConnectionStatus.connected
-                          ? CustomButton(
+                      if (_controller.status == ConnectionStatus.connected)
+                          CustomButton(
                               name: 'В чат',
                               onPressed: () {
                                 Navigator.push(
@@ -65,8 +65,7 @@ class _CustomConnectButtonState extends State<CustomConnectButton> {
                                   ),
                                 );
                               },
-                            )
-                          : SizedBox.shrink(),
+                            ),
                       Padding(
                         padding: const .only(left: 5),
                         child: CustomButton(

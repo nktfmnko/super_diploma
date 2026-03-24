@@ -34,7 +34,7 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: .all(8),
+      padding: const .all(8),
       child: widget.currentState.isWaiting
           ? Text(widget.currentState.buttonText)
           : Row(

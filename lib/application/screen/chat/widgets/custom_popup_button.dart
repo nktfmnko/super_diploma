@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:super_diploma/application/widget/chat_widgets/chat_popup_menu/delete_chat_alert_dialog.dart';
+import 'package:super_diploma/application/screen/chat/widgets/delete_chat_alert_dialog.dart';
 
 class CustomPopupButton extends StatelessWidget {
   final Future<void> Function(String) deleteHistoryFunc;

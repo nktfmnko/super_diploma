@@ -42,7 +42,7 @@ class ConnectivityUnknownException extends ConnectivityException {
       );
 }
 
-void handleConnectivityException(NearbyServiceException e) {
+Never handleConnectivityException(NearbyServiceException e) {
   switch (e) {
     case NearbyServiceBusyException():
       throw ConnectivityBusyException();

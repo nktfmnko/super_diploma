@@ -21,13 +21,14 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
   }
 
   Stream<List<ReceivedNearbyMessage<NearbyMessageContent>>>
-  watchMessagesByChatId(String chatId) {
+  watchMessagesByChatId(String chatId, {int limit = 20}) {
     return (select(messages)
           ..where((m) => m.chatId.equals(chatId))
           ..orderBy([
             (t) =>
-                OrderingTerm(expression: t.receivedAt, mode: OrderingMode.asc),
-          ]))
+                OrderingTerm(expression: t.receivedAt, mode: OrderingMode.desc),
+          ])
+          ..limit(limit))
         .watch()
         .map((rows) => rows.map((row) => row.messageData).toList());
   }

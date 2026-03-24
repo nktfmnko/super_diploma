@@ -49,13 +49,35 @@ class MessagingController extends ChangeNotifier {
   List<ReceivedNearbyMessage> get dbMessages => _dbMessages;
   StreamSubscription? _dbSubscription;
 
+  int _currentMessageLimit = 20;
+  bool _hasReachedMax = false;
+  bool _isLoadingMore = false;
+
+  bool get isLoadingMore => _isLoadingMore;
+
   void _subscribeToDatabase() {
-    _dbSubscription = _messageDao.watchMessagesByChatId(_device.info.id).listen(
-      (data) {
-        _dbMessages = data;
-        notifyListeners();
-      },
-    );
+    _dbSubscription?.cancel();
+    _dbSubscription = _messageDao
+        .watchMessagesByChatId(_device.info.id, limit: _currentMessageLimit)
+        .listen((data) {
+          _dbMessages = data;
+          _hasReachedMax = data.length < _currentMessageLimit;
+          notifyListeners();
+        });
+  }
+
+  void loadMore() async {
+    if (_hasReachedMax || _isLoadingMore) return;
+    _isLoadingMore = true;
+    notifyListeners();
+
+    _currentMessageLimit += 20;
+
+    await Future.delayed(const Duration(milliseconds: 100));
+    _isLoadingMore = false;
+    _subscribeToDatabase();
+
+    notifyListeners();
   }
 
   void _subscribeToStatus() {
