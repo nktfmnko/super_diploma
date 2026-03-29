@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:nearby_service/nearby_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:super_diploma/domain/chat_message_entity.dart';
 import 'package:super_diploma/domain/repository/nearby_messaging_service.dart';
 import 'package:super_diploma/infrastructure/datasources/daos/messages_dao.dart';
+import 'package:super_diploma/infrastructure/repository/data_picker_impl.dart';
 
 extension CommunicationChannelStateX on CommunicationChannelState {
   String get buttonText {
@@ -31,22 +35,30 @@ class MessagingController extends ChangeNotifier {
     _subscribeToDatabase();
     _subscribeToStatus();
     _subscribeToMessages();
+    _subscribeToFiles();
   }
 
   final _messagingService = GetIt.I<INearbyMessagingService>();
   final _messageDao = GetIt.I<MessagesDao>();
+  final _filesPiker = DataPicker();
 
   StreamSubscription<CommunicationChannelState>? _communicationStatus;
   StreamSubscription<ReceivedNearbyMessage>? _messageSubscription;
-  StreamSubscription<ReceivedNearbyFilesPack>? _filesSubscription;
+  StreamSubscription<void>? _filesSubscription;
+
+  final _fileRequestEventController =
+      StreamController<NearbyMessageFilesRequest>.broadcast();
+
+  Stream<NearbyMessageFilesRequest> get fileRequestStream =>
+      _fileRequestEventController.stream;
 
   CommunicationChannelState _state = CommunicationChannelState.notConnected;
 
   CommunicationChannelState get state => _state;
 
-  List<ReceivedNearbyMessage> _dbMessages = [];
+  List<ChatMessageEntity> _dbMessages = [];
 
-  List<ReceivedNearbyMessage> get dbMessages => _dbMessages;
+  List<ChatMessageEntity> get dbMessages => _dbMessages;
   StreamSubscription? _dbSubscription;
 
   int _currentMessageLimit = 20;
@@ -95,16 +107,19 @@ class MessagingController extends ChangeNotifier {
   void _subscribeToMessages() {
     _messageSubscription = _messagingService.messagesStream.listen(
       (message) {
-        _messageDao.insertMessage(message, _device.info.id);
-
         message.content.byType(
-          onTextRequest: (request) {
-            //_sendAutoResponse(message.sender, request.id);
+          onTextRequest: (request) async {
+            await _messageDao.insertMessage(message, _device.info.id);
             debugPrint(request.value);
           },
           onTextResponse: (response) {
             debugPrint('Наше сообщение ${response.id} было успешно доставлено');
           },
+          onFilesRequest: (request) {
+            _fileRequestEventController.add(request);
+            debugPrint('Получен запрос на файлы: ${request.id}');
+          },
+          onFilesResponse: (response) {},
         );
       },
       onError: (e) {
@@ -114,9 +129,28 @@ class MessagingController extends ChangeNotifier {
   }
 
   void _subscribeToFiles() {
-    _filesSubscription = _messagingService.filesStream.listen((pack) {
-      debugPrint('файл');
-    });
+    _filesSubscription = _messagingService.filesStream
+        .asyncMap((pack) {
+          _saveFiles(pack);
+        })
+        .listen((_) {
+          debugPrint('обработали');
+        });
+  }
+
+  Future<void> _saveFiles(ReceivedNearbyFilesPack pack) async {
+    final directory = await getApplicationDocumentsDirectory();
+
+    for (final nearbyFile in pack.files) {
+      final file = await File(nearbyFile.path).copy(
+        '${directory.path}/${DateTime.now().microsecondsSinceEpoch}.${nearbyFile.extension}',
+      );
+      await _messageDao.insertFileMessage(
+        chatId: _device.info.id,
+        pathToFile: file.path,
+        sender: _device.info,
+      );
+    }
   }
 
   Future<void> connect() async {
@@ -139,7 +173,39 @@ class MessagingController extends ChangeNotifier {
       content: request,
       sender: NearbyDeviceInfo(displayName: 'Я', id: 'me'),
     );
-    _messageDao.insertMessage(myMessage, _device.info.id);
+    await _messageDao.insertMessage(myMessage, _device.info.id);
+  }
+
+  Future<void> sendFiles() async {
+    final files = await _filesPiker.pickFiles();
+    if (files == null) return;
+
+    final request = NearbyMessageFilesRequest.create(
+      files: files.map((e) => NearbyFileInfo(path: e.path!)).toList(),
+    );
+
+    await _messagingService.sendMessage(
+      content: request,
+      receiver: _device.info,
+    );
+
+    for (final file in request.files) {
+      await _messageDao.insertFileMessage(
+        chatId: _device.info.id,
+        pathToFile: file.path,
+        sender: NearbyDeviceInfo(displayName: 'Я', id: 'me'),
+      );
+    }
+  }
+
+  Future<void> respondToFileRequest(
+    NearbyMessageFilesRequest request,
+    bool accept,
+  ) async {
+    await _messagingService.sendMessage(
+      content: NearbyMessageFilesResponse(id: request.id, isAccepted: accept),
+      receiver: _device.info,
+    );
   }
 
   Future<void> _sendAutoResponse(
@@ -162,11 +228,8 @@ class MessagingController extends ChangeNotifier {
     await _messageDao.deleteHistory(chatId);
   }
 
-  Future<List<ReceivedNearbyMessage>> searchMessage(
-    String chatId,
-    String query,
-  ) async {
-    return await _messageDao.searchMessages(chatId, query);
+  Future<List<ChatMessageEntity>> searchMessage(String query) async {
+    return await _messageDao.searchMessages(_device.info.id, query);
   }
 
   @override
@@ -175,6 +238,7 @@ class MessagingController extends ChangeNotifier {
     _messageSubscription?.cancel();
     _filesSubscription?.cancel();
     _dbSubscription?.cancel();
+    _fileRequestEventController.close();
     disconnect();
     super.dispose();
   }

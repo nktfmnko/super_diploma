@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:nearby_service/nearby_service.dart';
-import 'package:super_diploma/application/screen/chat/widgets/message_widget.dart';
+import 'package:super_diploma/application/screen/chat/widgets/messages_widgets/message_widget.dart';
+import 'package:super_diploma/domain/chat_message_entity.dart';
 
 class MessagesList extends StatefulWidget {
-  final List<ReceivedNearbyMessage> messages;
+  final List<ChatMessageEntity> messages;
   final VoidCallback loadMore;
   final bool isLoading;
 
@@ -45,7 +44,7 @@ class _MessagesListState extends State<MessagesList> {
           return Center(child: CircularProgressIndicator());
         }
         final message = widget.messages[index];
-        final isMine = message.sender.id == 'me';
+        final isMine = message.message.sender.id == 'me';
         return MessageWidget(message: message, isMine: isMine);
       },
       separatorBuilder: (BuildContext context, int index) {

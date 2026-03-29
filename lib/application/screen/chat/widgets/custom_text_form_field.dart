@@ -4,12 +4,14 @@ import 'package:super_diploma/application/controllers/messaging_controller.dart'
 
 class CustomTextFormField extends StatefulWidget {
   final Future<void> Function(String message) onSend;
+  final Future<void> Function() onAttachFiles;
   final CommunicationChannelState currentState;
 
   const CustomTextFormField({
     super.key,
     required this.onSend,
     required this.currentState,
+    required this.onAttachFiles,
   });
 
   @override
@@ -21,7 +23,7 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
 
   Future<void> _handleSend() async {
     if (_controller.text.trim().isEmpty) return;
-    await widget.onSend(_controller.text);
+    await widget.onSend(_controller.text.trim());
     _controller.clear();
   }
 
@@ -50,10 +52,20 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
                         valueListenable: _controller,
                         builder: (_, value, _) {
                           final isEmpty = value.text.trim().isEmpty;
-                          return IconButton(
-                            onPressed: isEmpty ? null : _handleSend,
-                            icon: const Icon(Icons.send),
-                            color: Colors.blue,
+                          return Row(
+                            mainAxisAlignment: .end,
+                            mainAxisSize: .min,
+                            children: [
+                              IconButton(
+                                onPressed: widget.onAttachFiles,
+                                icon: const Icon(Icons.attach_file),
+                              ),
+                              IconButton(
+                                onPressed: isEmpty ? null : _handleSend,
+                                icon: const Icon(Icons.send),
+                                color: Colors.blue,
+                              ),
+                            ],
                           );
                         },
                       ),

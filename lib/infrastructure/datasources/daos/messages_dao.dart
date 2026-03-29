@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:nearby_service/nearby_service.dart';
+import 'package:super_diploma/domain/chat_message_entity.dart';
 import 'package:super_diploma/infrastructure/datasources/database.dart';
 import 'package:super_diploma/infrastructure/datasources/tables/messages.dart';
 
@@ -20,12 +21,37 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
+  Future<void> insertFileMessage({
+    required String chatId,
+    required String pathToFile,
+    required NearbyDeviceInfo sender,
+  }) async {
+    final fileContent = NearbyMessageFilesRequest.create(
+      files: [NearbyFileInfo(path: pathToFile)],
+    );
+    final fileMessage = ReceivedNearbyMessage(
+      content: fileContent,
+      sender: sender,
+    );
+
+    await into(messages).insert(
+      MessagesCompanion(
+        messageData: Value(fileMessage),
+        chatId: Value(chatId),
+        textContent: Value(pathToFile.split('/').last),
+        pathToFile: Value(pathToFile),
+      ),
+    );
+  }
+
   Future<void> deleteHistory(String chatId) async {
     await (delete(messages)..where((t) => t.chatId.equals(chatId))).go();
   }
 
-  Stream<List<ReceivedNearbyMessage<NearbyMessageContent>>>
-  watchMessagesByChatId(String chatId, {int limit = 20}) {
+  Stream<List<ChatMessageEntity>> watchMessagesByChatId(
+    String chatId, {
+    int limit = 20,
+  }) {
     return (select(messages)
           ..where((m) => m.chatId.equals(chatId))
           ..orderBy([
@@ -34,10 +60,20 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
           ])
           ..limit(limit))
         .watch()
-        .map((rows) => rows.map((row) => row.messageData).toList());
+        .map(
+          (rows) => rows
+              .map(
+                (row) => ChatMessageEntity(
+                  message: row.messageData,
+                  id: row.id,
+                  pathToFile: row.pathToFile,
+                ),
+              )
+              .toList(),
+        );
   }
 
-  Future<List<ReceivedNearbyMessage<NearbyMessageContent>>> searchMessages(
+  Future<List<ChatMessageEntity>> searchMessages(
     String chatId,
     String query,
   ) async {
@@ -48,6 +84,14 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
             ))
             .get();
 
-    return rows.map((row) => row.messageData).toList();
+    return rows
+        .map(
+          (row) => ChatMessageEntity(
+            message: row.messageData,
+            id: row.id,
+            pathToFile: row.pathToFile,
+          ),
+        )
+        .toList();
   }
 }

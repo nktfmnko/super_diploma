@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:super_diploma/application/controllers/messaging_controller.dart';
-import 'package:super_diploma/application/screen/chat/widgets/message_widget.dart';
+import 'package:super_diploma/application/screen/chat/widgets/messages_widgets/message_widget.dart';
 
 class MessageSearchDelegate extends SearchDelegate {
   final String chatId;
@@ -33,11 +33,12 @@ class MessageSearchDelegate extends SearchDelegate {
   Widget buildResults(BuildContext context) {
     return SafeArea(
       child: FutureBuilder(
-        future: controller.searchMessage(chatId, query),
+        future: controller.searchMessage(query.trim()),
         builder: (_, snapshot) {
           if (snapshot.hasError) {
             return const Center(child: Text('Ошибка при поиске'));
           }
+
           final result = snapshot.data ?? [];
           if (result.isEmpty) {
             return const Center(child: Text('Ничего не найдено'));
@@ -47,7 +48,7 @@ class MessageSearchDelegate extends SearchDelegate {
             padding: const .symmetric(horizontal: 8, vertical: 10),
             itemBuilder: (_, index) {
               final message = result[index];
-              final isMine = message.sender.id == 'me';
+              final isMine = message.message.sender.id == 'me';
               return MessageWidget(message: message, isMine: isMine);
             },
             separatorBuilder: (_, _) {

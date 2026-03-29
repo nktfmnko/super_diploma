@@ -10,5 +10,7 @@ class Messages extends Table {
 
   TextColumn get chatId => text()();
 
+  TextColumn get pathToFile => text().nullable()();
+
   DateTimeColumn get receivedAt => dateTime().withDefault(currentDateAndTime)();
 }

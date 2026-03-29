@@ -56,6 +56,17 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _pathToFileMeta = const VerificationMeta(
+    'pathToFile',
+  );
+  @override
+  late final GeneratedColumn<String> pathToFile = GeneratedColumn<String>(
+    'path_to_file',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _receivedAtMeta = const VerificationMeta(
     'receivedAt',
   );
@@ -74,6 +85,7 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     messageData,
     textContent,
     chatId,
+    pathToFile,
     receivedAt,
   ];
   @override
@@ -108,6 +120,15 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
     } else if (isInserting) {
       context.missing(_chatIdMeta);
     }
+    if (data.containsKey('path_to_file')) {
+      context.handle(
+        _pathToFileMeta,
+        pathToFile.isAcceptableOrUnknown(
+          data['path_to_file']!,
+          _pathToFileMeta,
+        ),
+      );
+    }
     if (data.containsKey('received_at')) {
       context.handle(
         _receivedAtMeta,
@@ -141,6 +162,10 @@ class $MessagesTable extends Messages with TableInfo<$MessagesTable, Message> {
         DriftSqlType.string,
         data['${effectivePrefix}chat_id'],
       )!,
+      pathToFile: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path_to_file'],
+      ),
       receivedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}received_at'],
@@ -162,12 +187,14 @@ class Message extends DataClass implements Insertable<Message> {
   final ReceivedNearbyMessage<NearbyMessageContent> messageData;
   final String? textContent;
   final String chatId;
+  final String? pathToFile;
   final DateTime receivedAt;
   const Message({
     required this.id,
     required this.messageData,
     this.textContent,
     required this.chatId,
+    this.pathToFile,
     required this.receivedAt,
   });
   @override
@@ -183,6 +210,9 @@ class Message extends DataClass implements Insertable<Message> {
       map['text_content'] = Variable<String>(textContent);
     }
     map['chat_id'] = Variable<String>(chatId);
+    if (!nullToAbsent || pathToFile != null) {
+      map['path_to_file'] = Variable<String>(pathToFile);
+    }
     map['received_at'] = Variable<DateTime>(receivedAt);
     return map;
   }
@@ -195,6 +225,9 @@ class Message extends DataClass implements Insertable<Message> {
           ? const Value.absent()
           : Value(textContent),
       chatId: Value(chatId),
+      pathToFile: pathToFile == null && nullToAbsent
+          ? const Value.absent()
+          : Value(pathToFile),
       receivedAt: Value(receivedAt),
     );
   }
@@ -212,6 +245,7 @@ class Message extends DataClass implements Insertable<Message> {
           ),
       textContent: serializer.fromJson<String?>(json['textContent']),
       chatId: serializer.fromJson<String>(json['chatId']),
+      pathToFile: serializer.fromJson<String?>(json['pathToFile']),
       receivedAt: serializer.fromJson<DateTime>(json['receivedAt']),
     );
   }
@@ -224,6 +258,7 @@ class Message extends DataClass implements Insertable<Message> {
           .toJson<ReceivedNearbyMessage<NearbyMessageContent>>(messageData),
       'textContent': serializer.toJson<String?>(textContent),
       'chatId': serializer.toJson<String>(chatId),
+      'pathToFile': serializer.toJson<String?>(pathToFile),
       'receivedAt': serializer.toJson<DateTime>(receivedAt),
     };
   }
@@ -233,12 +268,14 @@ class Message extends DataClass implements Insertable<Message> {
     ReceivedNearbyMessage<NearbyMessageContent>? messageData,
     Value<String?> textContent = const Value.absent(),
     String? chatId,
+    Value<String?> pathToFile = const Value.absent(),
     DateTime? receivedAt,
   }) => Message(
     id: id ?? this.id,
     messageData: messageData ?? this.messageData,
     textContent: textContent.present ? textContent.value : this.textContent,
     chatId: chatId ?? this.chatId,
+    pathToFile: pathToFile.present ? pathToFile.value : this.pathToFile,
     receivedAt: receivedAt ?? this.receivedAt,
   );
   Message copyWithCompanion(MessagesCompanion data) {
@@ -251,6 +288,9 @@ class Message extends DataClass implements Insertable<Message> {
           ? data.textContent.value
           : this.textContent,
       chatId: data.chatId.present ? data.chatId.value : this.chatId,
+      pathToFile: data.pathToFile.present
+          ? data.pathToFile.value
+          : this.pathToFile,
       receivedAt: data.receivedAt.present
           ? data.receivedAt.value
           : this.receivedAt,
@@ -264,6 +304,7 @@ class Message extends DataClass implements Insertable<Message> {
           ..write('messageData: $messageData, ')
           ..write('textContent: $textContent, ')
           ..write('chatId: $chatId, ')
+          ..write('pathToFile: $pathToFile, ')
           ..write('receivedAt: $receivedAt')
           ..write(')'))
         .toString();
@@ -271,7 +312,7 @@ class Message extends DataClass implements Insertable<Message> {
 
   @override
   int get hashCode =>
-      Object.hash(id, messageData, textContent, chatId, receivedAt);
+      Object.hash(id, messageData, textContent, chatId, pathToFile, receivedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -280,6 +321,7 @@ class Message extends DataClass implements Insertable<Message> {
           other.messageData == this.messageData &&
           other.textContent == this.textContent &&
           other.chatId == this.chatId &&
+          other.pathToFile == this.pathToFile &&
           other.receivedAt == this.receivedAt);
 }
 
@@ -288,12 +330,14 @@ class MessagesCompanion extends UpdateCompanion<Message> {
   final Value<ReceivedNearbyMessage<NearbyMessageContent>> messageData;
   final Value<String?> textContent;
   final Value<String> chatId;
+  final Value<String?> pathToFile;
   final Value<DateTime> receivedAt;
   const MessagesCompanion({
     this.id = const Value.absent(),
     this.messageData = const Value.absent(),
     this.textContent = const Value.absent(),
     this.chatId = const Value.absent(),
+    this.pathToFile = const Value.absent(),
     this.receivedAt = const Value.absent(),
   });
   MessagesCompanion.insert({
@@ -301,6 +345,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     required ReceivedNearbyMessage<NearbyMessageContent> messageData,
     this.textContent = const Value.absent(),
     required String chatId,
+    this.pathToFile = const Value.absent(),
     this.receivedAt = const Value.absent(),
   }) : messageData = Value(messageData),
        chatId = Value(chatId);
@@ -309,6 +354,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Expression<String>? messageData,
     Expression<String>? textContent,
     Expression<String>? chatId,
+    Expression<String>? pathToFile,
     Expression<DateTime>? receivedAt,
   }) {
     return RawValuesInsertable({
@@ -316,6 +362,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
       if (messageData != null) 'message_data': messageData,
       if (textContent != null) 'text_content': textContent,
       if (chatId != null) 'chat_id': chatId,
+      if (pathToFile != null) 'path_to_file': pathToFile,
       if (receivedAt != null) 'received_at': receivedAt,
     });
   }
@@ -325,6 +372,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     Value<ReceivedNearbyMessage<NearbyMessageContent>>? messageData,
     Value<String?>? textContent,
     Value<String>? chatId,
+    Value<String?>? pathToFile,
     Value<DateTime>? receivedAt,
   }) {
     return MessagesCompanion(
@@ -332,6 +380,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
       messageData: messageData ?? this.messageData,
       textContent: textContent ?? this.textContent,
       chatId: chatId ?? this.chatId,
+      pathToFile: pathToFile ?? this.pathToFile,
       receivedAt: receivedAt ?? this.receivedAt,
     );
   }
@@ -353,6 +402,9 @@ class MessagesCompanion extends UpdateCompanion<Message> {
     if (chatId.present) {
       map['chat_id'] = Variable<String>(chatId.value);
     }
+    if (pathToFile.present) {
+      map['path_to_file'] = Variable<String>(pathToFile.value);
+    }
     if (receivedAt.present) {
       map['received_at'] = Variable<DateTime>(receivedAt.value);
     }
@@ -366,6 +418,7 @@ class MessagesCompanion extends UpdateCompanion<Message> {
           ..write('messageData: $messageData, ')
           ..write('textContent: $textContent, ')
           ..write('chatId: $chatId, ')
+          ..write('pathToFile: $pathToFile, ')
           ..write('receivedAt: $receivedAt')
           ..write(')'))
         .toString();
@@ -390,6 +443,7 @@ typedef $$MessagesTableCreateCompanionBuilder =
       required ReceivedNearbyMessage<NearbyMessageContent> messageData,
       Value<String?> textContent,
       required String chatId,
+      Value<String?> pathToFile,
       Value<DateTime> receivedAt,
     });
 typedef $$MessagesTableUpdateCompanionBuilder =
@@ -398,6 +452,7 @@ typedef $$MessagesTableUpdateCompanionBuilder =
       Value<ReceivedNearbyMessage<NearbyMessageContent>> messageData,
       Value<String?> textContent,
       Value<String> chatId,
+      Value<String?> pathToFile,
       Value<DateTime> receivedAt,
     });
 
@@ -432,6 +487,11 @@ class $$MessagesTableFilterComposer
 
   ColumnFilters<String> get chatId => $composableBuilder(
     column: $table.chatId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get pathToFile => $composableBuilder(
+    column: $table.pathToFile,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -470,6 +530,11 @@ class $$MessagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get pathToFile => $composableBuilder(
+    column: $table.pathToFile,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get receivedAt => $composableBuilder(
     column: $table.receivedAt,
     builder: (column) => ColumnOrderings(column),
@@ -504,6 +569,11 @@ class $$MessagesTableAnnotationComposer
 
   GeneratedColumn<String> get chatId =>
       $composableBuilder(column: $table.chatId, builder: (column) => column);
+
+  GeneratedColumn<String> get pathToFile => $composableBuilder(
+    column: $table.pathToFile,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get receivedAt => $composableBuilder(
     column: $table.receivedAt,
@@ -544,12 +614,14 @@ class $$MessagesTableTableManager
                     const Value.absent(),
                 Value<String?> textContent = const Value.absent(),
                 Value<String> chatId = const Value.absent(),
+                Value<String?> pathToFile = const Value.absent(),
                 Value<DateTime> receivedAt = const Value.absent(),
               }) => MessagesCompanion(
                 id: id,
                 messageData: messageData,
                 textContent: textContent,
                 chatId: chatId,
+                pathToFile: pathToFile,
                 receivedAt: receivedAt,
               ),
           createCompanionCallback:
@@ -559,12 +631,14 @@ class $$MessagesTableTableManager
                 messageData,
                 Value<String?> textContent = const Value.absent(),
                 required String chatId,
+                Value<String?> pathToFile = const Value.absent(),
                 Value<DateTime> receivedAt = const Value.absent(),
               }) => MessagesCompanion.insert(
                 id: id,
                 messageData: messageData,
                 textContent: textContent,
                 chatId: chatId,
+                pathToFile: pathToFile,
                 receivedAt: receivedAt,
               ),
           withReferenceMapper: (p0) => p0
