@@ -31,7 +31,6 @@ class NearbyConnectionService implements INearbyConnectionService {
     } on NearbyServiceException catch (e) {
       handleConnectivityException(e);
     }
-    return false;
   }
 
   @override

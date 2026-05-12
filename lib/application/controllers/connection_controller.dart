@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:nearby_service/nearby_service.dart';
 import 'package:super_diploma/domain/errors/connectivity_exception.dart';
 import 'package:super_diploma/domain/repository/nearby_connection_service.dart';
@@ -30,57 +31,59 @@ enum ConnectionStatus {
 }
 
 class ConnectionController extends ChangeNotifier {
-  final INearbyConnectionService _connectionService;
   final NearbyDevice _device;
+
+  ConnectionController({required this._device}) {
+    _status = _mapDeviceToStatus(_device);
+
+    _subscribeToStatus();
+  }
+
+  final _connectionService = GetIt.I<INearbyConnectionService>();
+
   StreamSubscription? _statusSubscription;
 
   late ConnectionStatus _status;
 
   ConnectionStatus get status => _status;
 
-  bool _isProcessing = false;
-
-  bool get isProcessing => _isProcessing;
-
-  ConnectionController({
-    required this._connectionService,
-    required this._device,
-  }) {
-    _status = _mapDeviceToStatus(_device);
-    _subscribeToStatus();
-  }
-
   void _subscribeToStatus() {
+    _statusSubscription?.cancel().catchError((e) {
+      debugPrint('Стрим уже был закрыт: $e');
+    });
     _statusSubscription = _connectionService
         .getConnectedDeviceStream(_device.info.id)
-        .listen((deviceFromStream) {
-          if (_isProcessing) return;
-          final newStatus = _mapDeviceToStatus(deviceFromStream);
-          _updateStatus(newStatus);
-        });
+        .listen(
+          (deviceFromStream) {
+            final newStatus = _mapDeviceToStatus(deviceFromStream);
+            _updateStatus(newStatus);
+          },
+          onError: (e) {
+            debugPrint('Ошибка в стриме: $e');
+            _updateStatus(ConnectionStatus.error);
+          },
+          cancelOnError: false,
+        );
   }
 
   ConnectionStatus _mapDeviceToStatus(NearbyDevice? device) {
     if (device == null) return ConnectionStatus.disconnected;
 
-    final s = device.status;
-
-    if (s.isConnected) return ConnectionStatus.connected;
-    if (s.isConnecting) return ConnectionStatus.connecting;
-    if (s.isFailed) return ConnectionStatus.error;
-
-    if (s.isAvailable || s.isUnavailable) {
-      return ConnectionStatus.disconnected;
+    switch (device.status) {
+      case NearbyDeviceStatus.connected:
+        return ConnectionStatus.connected;
+      case NearbyDeviceStatus.failed:
+        return ConnectionStatus.error;
+      case NearbyDeviceStatus.connecting:
+        return ConnectionStatus.connecting;
+      case NearbyDeviceStatus.available:
+      case NearbyDeviceStatus.unavailable:
+        return ConnectionStatus.disconnected;
     }
-
-    return ConnectionStatus.disconnected;
   }
 
   Future<void> handleAction() async {
-    if (_isProcessing) return;
-
-    _isProcessing = true;
-
+    if (_status.isLoading) return;
     try {
       if (_status == ConnectionStatus.connected) {
         _updateStatus(ConnectionStatus.disconnecting);
@@ -88,16 +91,17 @@ class ConnectionController extends ChangeNotifier {
       } else {
         _updateStatus(ConnectionStatus.connecting);
         final success = await _connectionService.connect(_device);
-        if (!success) {
+        if (success) {
+          //костыль, чтобы слушать стрим
+          await Future.delayed(const Duration(seconds: 1));
+          _subscribeToStatus();
+        } else {
           _updateStatus(ConnectionStatus.error);
         }
       }
     } on ConnectivityException {
       _updateStatus(ConnectionStatus.error);
       rethrow;
-    } finally {
-      _isProcessing = false;
-      notifyListeners();
     }
   }
 
@@ -109,7 +113,7 @@ class ConnectionController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _statusSubscription?.cancel();
+    _statusSubscription?.cancel().catchError((_) {});
     super.dispose();
   }
 }
