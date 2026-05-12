@@ -8,28 +8,39 @@ import 'package:super_diploma/application/screen/chat/widgets/custom_text_form_f
 import 'package:super_diploma/application/screen/chat/widgets/messages_list.dart';
 
 class ChatScreen extends StatefulWidget {
-  final NearbyDevice device;
+  final NearbyDeviceInfo deviceInfo;
+  final bool isReadOnly;
 
-  const ChatScreen({super.key, required this.device});
+  const ChatScreen({
+    super.key,
+    required this.deviceInfo,
+    required this.isReadOnly,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen>
+    with SingleTickerProviderStateMixin {
   late final MessagingController _messagingController;
   StreamSubscription? _fileSubscription;
 
   @override
   void initState() {
-    _messagingController = MessagingController(widget.device);
-    _fileSubscription = _messagingController.fileRequestStream.listen((
-      request,
-    ) {
-      if (!mounted) return;
-      _showFilePickerSnackbar(request);
-    });
+    _messagingController = MessagingController(
+      widget.deviceInfo,
+      isReadOnly: widget.isReadOnly,
+    );
 
+    if (!widget.isReadOnly) {
+      _fileSubscription = _messagingController.fileRequestStream.listen((
+        request,
+      ) {
+        if (!mounted) return;
+        _showFilePickerSnackbar(request);
+      });
+    }
     super.initState();
   }
 
@@ -74,10 +85,10 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.black26,
-          title: Text(widget.device.info.displayName, overflow: .fade),
+          title: Text(widget.deviceInfo.displayName, overflow: .fade),
           actions: [
             CustomPopupButton(
-              chatId: widget.device.info.id,
+              chatId: widget.deviceInfo.id,
               controller: _messagingController,
             ),
           ],
@@ -95,11 +106,12 @@ class _ChatScreenState extends State<ChatScreen> {
                       isLoading: _messagingController.isLoadingMore,
                     ),
                   ),
-                  CustomTextFormField(
-                    onSend: _messagingController.sendText,
-                    currentState: _messagingController.state,
-                    onAttachFiles: _messagingController.sendFiles,
-                  ),
+                  if (!widget.isReadOnly)
+                    CustomTextFormField(
+                      onSend: _messagingController.sendText,
+                      currentState: _messagingController.state,
+                      onAttachFiles: _messagingController.sendFiles,
+                    ),
                 ],
               );
             },

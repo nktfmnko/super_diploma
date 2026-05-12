@@ -54,18 +54,20 @@ class _CustomConnectButtonState extends State<CustomConnectButton> {
                 : Row(
                     children: [
                       if (_controller.status == ConnectionStatus.connected)
-                          CustomButton(
-                              name: 'В чат',
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        ChatScreen(device: widget.device),
-                                  ),
-                                );
-                              },
-                            ),
+                        CustomButton(
+                          name: 'В чат',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                  deviceInfo: widget.device.info,
+                                  isReadOnly: false,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       Padding(
                         padding: const .only(left: 5),
                         child: CustomButton(

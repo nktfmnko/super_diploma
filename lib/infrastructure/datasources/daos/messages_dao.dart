@@ -1,31 +1,42 @@
 import 'package:drift/drift.dart';
 import 'package:nearby_service/nearby_service.dart';
 import 'package:super_diploma/domain/chat_message_entity.dart';
+import 'package:super_diploma/infrastructure/datasources/daos/users_dao.dart';
 import 'package:super_diploma/infrastructure/datasources/database.dart';
 import 'package:super_diploma/infrastructure/datasources/tables/messages.dart';
+import 'package:super_diploma/infrastructure/datasources/tables/users.dart';
 
 part 'messages_dao.g.dart';
 
-@DriftAccessor(tables: [Messages])
+@DriftAccessor(tables: [Messages, Users])
 class MessagesDao extends DatabaseAccessor<AppDatabase>
     with _$MessagesDaoMixin {
   MessagesDao(super.attachedDatabase);
 
-  Future<void> insertMessage(ReceivedNearbyMessage msg, String chatId) async {
+  UsersDao get _usersDao => UsersDao(attachedDatabase);
+
+  Future<void> insertMessage(
+    ReceivedNearbyMessage msg,
+    NearbyDeviceInfo deviceInfo,
+  ) async {
+    await _usersDao.ensureUserExists(deviceInfo);
+
     await into(messages).insert(
       MessagesCompanion(
         messageData: Value(msg),
-        chatId: Value(chatId),
+        chatId: Value(deviceInfo.id),
         textContent: Value(msg.content.toString()),
       ),
     );
   }
 
   Future<void> insertFileMessage({
-    required String chatId,
+    required NearbyDeviceInfo deviceInfo,
     required String pathToFile,
     required NearbyDeviceInfo sender,
   }) async {
+    await _usersDao.ensureUserExists(deviceInfo);
+
     final fileContent = NearbyMessageFilesRequest.create(
       files: [NearbyFileInfo(path: pathToFile)],
     );
@@ -37,7 +48,7 @@ class MessagesDao extends DatabaseAccessor<AppDatabase>
     await into(messages).insert(
       MessagesCompanion(
         messageData: Value(fileMessage),
-        chatId: Value(chatId),
+        chatId: Value(deviceInfo.id),
         textContent: Value(pathToFile.split('/').last),
         pathToFile: Value(pathToFile),
       ),

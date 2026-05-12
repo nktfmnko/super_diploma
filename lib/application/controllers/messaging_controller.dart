@@ -28,14 +28,17 @@ extension CommunicationChannelStateX on CommunicationChannelState {
 }
 
 class MessagingController extends ChangeNotifier {
-  final NearbyDevice _device;
+  final NearbyDeviceInfo _deviceInfo;
+  final bool isReadOnly;
 
-  MessagingController(this._device) {
-    connect();
+  MessagingController(this._deviceInfo, {this.isReadOnly = false}) {
     _subscribeToDatabase();
-    _subscribeToStatus();
-    _subscribeToMessages();
-    _subscribeToFiles();
+    if (!isReadOnly) {
+      connect();
+      _subscribeToStatus();
+      _subscribeToMessages();
+      _subscribeToFiles();
+    }
   }
 
   final _messagingService = GetIt.I<INearbyMessagingService>();
@@ -70,7 +73,7 @@ class MessagingController extends ChangeNotifier {
   void _subscribeToDatabase() {
     _dbSubscription?.cancel();
     _dbSubscription = _messageDao
-        .watchMessagesByChatId(_device.info.id, limit: _currentMessageLimit)
+        .watchMessagesByChatId(_deviceInfo.id, limit: _currentMessageLimit)
         .listen((data) {
           _dbMessages = data;
           _hasReachedMax = data.length < _currentMessageLimit;
@@ -109,7 +112,7 @@ class MessagingController extends ChangeNotifier {
       (message) {
         message.content.byType(
           onTextRequest: (request) async {
-            await _messageDao.insertMessage(message, _device.info.id);
+            await _messageDao.insertMessage(message, _deviceInfo);
             debugPrint(request.value);
           },
           onTextResponse: (response) {
@@ -119,7 +122,9 @@ class MessagingController extends ChangeNotifier {
             _fileRequestEventController.add(request);
             debugPrint('Получен запрос на файлы: ${request.id}');
           },
-          onFilesResponse: (response) {},
+          onFilesResponse: (response) {
+            print('Получили ответ в ${DateTime.now()}');
+          },
         );
       },
       onError: (e) {
@@ -141,20 +146,49 @@ class MessagingController extends ChangeNotifier {
   Future<void> _saveFiles(ReceivedNearbyFilesPack pack) async {
     final directory = await getApplicationDocumentsDirectory();
 
-    for (final nearbyFile in pack.files) {
-      final file = await File(nearbyFile.path).copy(
-        '${directory.path}/${DateTime.now().microsecondsSinceEpoch}.${nearbyFile.extension}',
-      );
-      await _messageDao.insertFileMessage(
-        chatId: _device.info.id,
-        pathToFile: file.path,
-        sender: _device.info,
-      );
-    }
+    final tasks = pack.files.map((nearbyFile) async {
+      final newPath =
+          '${directory.path}/${DateTime.now().microsecondsSinceEpoch}.${nearbyFile.extension}';
+      try {
+        final file = await File(nearbyFile.path).rename(newPath);
+
+        return {'path': file.path, 'size': file.lengthSync()};
+      } catch (e) {
+        final file = await File(nearbyFile.path).copy(newPath);
+        return {'path': file.path, 'size': file.lengthSync()};
+      }
+    });
+
+    final results = await Future.wait(tasks);
+
+    await _messageDao.transaction(() async {
+      for (final res in results) {
+        print('Обработан файл: ${res['path']}, Размер: ${res['size']} байт, ${DateTime.now()}');
+        await _messageDao.insertFileMessage(
+          pathToFile: res['path'].toString(),
+          sender: _deviceInfo,
+          deviceInfo: _deviceInfo,
+        );
+        print('Файл записан, ${DateTime.now()}');
+      }
+    });
+    // for (final nearbyFile in pack.files) {
+    //   final file = await File(nearbyFile.path).rename(
+    //     '${directory.path}/${DateTime.now().microsecondsSinceEpoch}.${nearbyFile.extension}',
+    //   );
+    //   print(
+    //     'Получили в ${DateTime.now()}, Размер файла:${file.lengthSync()}байт',
+    //   );
+    //   await _messageDao.insertFileMessage(
+    //     pathToFile: file.path,
+    //     sender: _deviceInfo,
+    //     deviceInfo: _deviceInfo,
+    //   );
+    // }
   }
 
   Future<void> connect() async {
-    await _messagingService.startCommunication(_device.info.id);
+    await _messagingService.startCommunication(_deviceInfo.id);
   }
 
   Future<void> disconnect() async {
@@ -166,14 +200,14 @@ class MessagingController extends ChangeNotifier {
 
     await _messagingService.sendMessage(
       content: request,
-      receiver: _device.info,
+      receiver: _deviceInfo,
     );
 
     final myMessage = ReceivedNearbyMessage(
       content: request,
       sender: NearbyDeviceInfo(displayName: 'Я', id: 'me'),
     );
-    await _messageDao.insertMessage(myMessage, _device.info.id);
+    await _messageDao.insertMessage(myMessage, _deviceInfo);
   }
 
   Future<void> sendFiles() async {
@@ -186,14 +220,14 @@ class MessagingController extends ChangeNotifier {
 
     await _messagingService.sendMessage(
       content: request,
-      receiver: _device.info,
+      receiver: _deviceInfo,
     );
 
     for (final file in request.files) {
       await _messageDao.insertFileMessage(
-        chatId: _device.info.id,
         pathToFile: file.path,
         sender: NearbyDeviceInfo(displayName: 'Я', id: 'me'),
+        deviceInfo: _deviceInfo,
       );
     }
   }
@@ -204,7 +238,7 @@ class MessagingController extends ChangeNotifier {
   ) async {
     await _messagingService.sendMessage(
       content: NearbyMessageFilesResponse(id: request.id, isAccepted: accept),
-      receiver: _device.info,
+      receiver: _deviceInfo,
     );
   }
 
@@ -229,17 +263,20 @@ class MessagingController extends ChangeNotifier {
   }
 
   Future<List<ChatMessageEntity>> searchMessage(String query) async {
-    return await _messageDao.searchMessages(_device.info.id, query);
+    return await _messageDao.searchMessages(_deviceInfo.id, query);
   }
 
   @override
   void dispose() {
-    _communicationStatus?.cancel();
-    _messageSubscription?.cancel();
-    _filesSubscription?.cancel();
     _dbSubscription?.cancel();
     _fileRequestEventController.close();
-    disconnect();
+
+    if (!isReadOnly) {
+      _communicationStatus?.cancel();
+      _messageSubscription?.cancel();
+      _filesSubscription?.cancel();
+      disconnect();
+    }
     super.dispose();
   }
 }

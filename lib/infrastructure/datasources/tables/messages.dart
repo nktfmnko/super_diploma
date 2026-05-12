@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:super_diploma/infrastructure/datasources/converters/message_converter.dart';
+import 'package:super_diploma/infrastructure/datasources/tables/users.dart';
 
 class Messages extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -8,7 +9,12 @@ class Messages extends Table {
 
   TextColumn get textContent => text().nullable()();
 
-  TextColumn get chatId => text()();
+  TextColumn get chatId => text().references(
+    Users,
+    #deviceId,
+    onUpdate: KeyAction.cascade,
+    onDelete: KeyAction.cascade,
+  )();
 
   TextColumn get pathToFile => text().nullable()();
 
